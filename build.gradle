@@ -1,0 +1,93 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'signing'
+
+group = 'com.byteatebit'
+version = '0.1.0'
+
+description = """byteatebit-nbserver"""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    maven { url privateRepositoryUrl }
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'com.byteatebit', name: 'byteatebit-common', version:'0.1.0'
+    testCompile group: 'junit', name: 'junit', version:'4.11'
+    testCompile group: 'org.mockito', name: 'mockito-core', version:'2.0.53-beta'
+}
+
+configurations {
+    priv
+}
+
+task srcJar(type: Jar) {
+    classifier = "src"
+    from sourceSets.main.allSource
+}
+
+signing {
+    required { gradle.taskGraph.hasTask("uploadArchives") }
+    sign configurations.archives
+}
+
+artifacts {
+    priv jar
+    priv srcJar
+    archives jar
+    archives srcJar
+}
+
+def projectPom = {
+    name project.name
+    packaging jar
+    description "byteatebit-nbserver is a Java non-blocking IO server library"
+    url "https://github.com/byteatebit/byteatebit-nbserver"
+
+    scm {
+        url "https://github.com/byteatebit/byteatebit-nbserver"
+    }
+
+    licenses {
+        license {
+            name "Apache License, Version 2.0"
+            url "https://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution "repo"
+        }
+    }
+}
+
+uploadPriv {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+            repository(url: privateUploadReleaseUrl) {
+                authentication(userName: byteatebitPrivateUser, password: byteatebitPrivatePassword)
+            }
+            snapshotRepository(url: privateUploadSnapshotUrl) {
+                authentication(userName: byteatebitPrivateUser, password: byteatebitPrivatePassword)
+            }
+            pom.project projectPom
+        }
+    }
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+            repository(url: publicUploadReleaseUrl) {
+                authentication(userName: byteatebitPublicUser, password: byteatebitPublicPassword)
+            }
+            snapshotRepository(url: publicUploadSnapshotUrl) {
+                authentication(userName: byteatebitPublicUser, password: byteatebitPublicPassword)
+            }
+            pom.project projectPom
+        }
+    }
+}
